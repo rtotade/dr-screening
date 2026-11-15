@@ -1,0 +1,28 @@
+# Training configuration for diabetic retinopathy grading
+data:
+  manifest: data/manifest.csv     # image_path, grade, patient_id, eye
+  val_frac: 0.2
+  image_size: 512                 # 512 is a good default; 384 for faster CPU inference
+  ben_graham: true
+  cache_dir: data/cache
+  balance_power: 0.5              # 0 = natural distribution, 1 = fully balanced
+  num_workers: 4
+
+model:
+  backbone: efficientnet_b3       # any timm model, e.g. convnext_tiny, resnet50
+  pretrained: true                # ImageNet weights (downloaded from Hugging Face)
+  dropout: 0.3
+
+train:
+  epochs: 20
+  batch_size: 16
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  label_smoothing: 0.05
+  early_stop_patience: 5
+  seed: 42
+  amp: true                       # mixed precision on GPU
+
+screening:
+  target_sensitivity: 0.90        # referable-DR operating point tuned on validation
+  output_dir: runs/default

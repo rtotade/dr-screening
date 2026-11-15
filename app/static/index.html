@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DR Screening · Technician</title>
+<style>
+  :root{--ink:#1a2433;--mut:#5b6575;--line:#d9dee7;--bg:#f5f7fa;--acc:#1f5fa8;--red:#b42318;--grn:#067647;--amb:#b54708}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+  header h1{font-size:18px;margin:0}header small{color:var(--mut)}
+  main{max-width:980px;margin:20px auto;padding:0 16px;display:grid;gap:16px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  label{font-size:13px;color:var(--mut);display:block;margin-bottom:4px}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:15px}
+  .eyes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:12px;text-align:center;min-height:200px;cursor:pointer;position:relative}
+  .drop img{max-width:100%;max-height:220px;border-radius:8px}.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:11px 18px;font-size:15px;cursor:pointer}
+  button:disabled{opacity:.5}.ghost{background:#fff;color:var(--acc);border:1px solid var(--acc)}
+  .banner{padding:14px 16px;border-radius:8px;color:#fff;font-weight:700;font-size:19px}
+  .res{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .eye{border:1px solid var(--line);border-radius:8px;padding:10px}.eye img{width:100%;border-radius:6px}
+  .bar{height:8px;background:#eef1f5;border-radius:4px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
+  .pr{display:grid;grid-template-columns:120px 1fr 48px;gap:6px;align-items:center;font-size:12px;margin:3px 0}
+  table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px;border-bottom:1px solid var(--line);text-align:left}
+  .tag{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff}.muted{color:var(--mut);font-size:13px}
+  @media(max-width:640px){.eyes,.res{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div><h1 data-i18n="title">Diabetic Retinopathy Screening</h1><small id="model">Loading model…</small></div>
+  <select id="lang" style="width:auto"><option value="en">English</option><option value="hi">हिन्दी</option></select></header>
+<main>
+  <form class="card" id="form">
+    <div class="row">
+      <div><label data-i18n="pid">Patient reference (no names)</label><input name="patient_ref" required maxlength="64" placeholder="PHC-2026-0001"></div>
+      <div><label data-i18n="age">Age</label><input name="age" type="number" min="1" max="120"></div>
+      <div><label data-i18n="sex">Sex</label><select name="sex"><option value=""></option><option>F</option><option>M</option><option>Other</option></select></div>
+      <div><label data-i18n="dy">Years with diabetes</label><input name="diabetes_years" type="number" step="0.5" min="0"></div>
+      <div><label data-i18n="site">Screening site</label><input name="site" placeholder="PHC Hoskote"></div>
+    </div>
+    <div class="eyes">
+      <div class="drop" id="d-right"><div data-i18n="re">Right eye (OD): tap to add photo</div><input type="file" name="right_eye" accept="image/*" capture="environment"></div>
+      <div class="drop" id="d-left"><div data-i18n="le">Left eye (OS): tap to add photo</div><input type="file" name="left_eye" accept="image/*" capture="environment"></div>
+    </div>
+    <p style="margin:14px 0 0"><button id="go" data-i18n="go">Screen patient</button> <span class="muted" id="status"></span></p>
+  </form>
+
+  <section class="card" id="result" hidden></section>
+
+  <section class="card"><h3 style="margin-top:0" data-i18n="recent">Recent screenings</h3>
+    <table><thead><tr><th>Time</th><th>Patient</th><th>Site</th><th>Result</th><th></th></tr></thead><tbody id="recent"></tbody></table></section>
+  <p class="muted" data-i18n="disc">Decision support for trained screeners. Not a diagnosis: every referral and a sample of non-referrals must be reviewed by an eye-care professional.</p>
+</main>
+<script>
+const T={hi:{title:"डायबिटिक रेटिनोपैथी जाँच",pid:"मरीज़ संदर्भ (नाम नहीं)",age:"उम्र",sex:"लिंग",dy:"डायबिटीज़ कितने वर्ष से",site:"जाँच केंद्र",
+ re:"दायीं आँख (OD): फोटो जोड़ें",le:"बायीं आँख (OS): फोटो जोड़ें",go:"जाँच करें",recent:"हाल की जाँचें",
+ disc:"यह केवल सहायता उपकरण है, निदान नहीं। हर रेफ़रल की नेत्र विशेषज्ञ द्वारा पुष्टि आवश्यक है।",refer:"नेत्र विशेषज्ञ को रेफ़र करें",ok:"रेफ़रल की आवश्यकता नहीं"}};
+const EN={refer:"REFER TO OPHTHALMOLOGIST",ok:"NO REFERRAL NEEDED"};
+let lang="en";const tr=k=>(lang!=="en"&&T[lang][k])||EN[k]||k;
+document.getElementById("lang").onchange=e=>{lang=e.target.value;document.querySelectorAll("[data-i18n]").forEach(el=>{
+  el.dataset.en ??= el.textContent; el.textContent = lang==="en"?el.dataset.en:(T[lang][el.dataset.i18n]||el.dataset.en)})};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+for(const id of ["d-right","d-left"]){const box=document.getElementById(id),inp=box.querySelector("input");
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;let img=box.querySelector("img");if(!img){img=document.createElement("img");box.prepend(img)}
+    img.src=URL.createObjectURL(f);box.querySelector("div").hidden=true}}
+async function health(){try{const h=await (await fetch("/health")).json();
+  document.getElementById("model").textContent=h.model?`Model ${h.model.backbone} · referral threshold ${(+h.model.referable_threshold).toFixed(3)}`:"No model loaded"}catch{document.getElementById("model").textContent="Service offline"}}
+async function recent(){const rows=await (await fetch("/api/screenings?limit=20")).json();
+  document.getElementById("recent").innerHTML=rows.map(r=>`<tr><td>${esc(r.created_at.replace("T"," ").slice(0,16))}</td><td>${esc(r.patient_ref)}</td><td>${esc(r.site||"")}</td>
+  <td><span class="tag" style="background:${r.refer?"var(--red)":"var(--grn)"}">${r.refer?"Refer":"No referral"}</span></td><td><a href="/api/screenings/${esc(r.id)}/report" target="_blank">Report</a></td></tr>`).join("")}
+function render(r){const el=document.getElementById("result");el.hidden=false;
+  const eyes=r.eyes.map(e=>{const probs=e.probabilities?Object.entries(e.probabilities).map(([g,p])=>`<div class="pr"><span>${esc(g)}</span><div class="bar"><i style="width:${p*100}%"></i></div><span>${(p*100).toFixed(0)}%</span></div>`).join(""):"";
+    return `<div class="eye"><b>${esc(e.eye.toUpperCase())}</b> · ${e.gradable?esc(e.grade_name):`<span style="color:var(--amb)">Ungradable</span>`}
+    ${e.gradable?`<p class="muted">Referable probability ${(e.referable_probability*100).toFixed(1)}%</p>`:`<p style="color:var(--amb)">${e.quality.reasons.map(esc).join("<br>")}</p>`}
+    ${e.heatmap_png_b64?`<img src="data:image/png;base64,${e.heatmap_png_b64}" alt="attention map">`:""}${probs}</div>`}).join("");
+  el.innerHTML=`<div class="banner" style="background:${r.refer?"var(--red)":"var(--grn)"}">${tr(r.refer?"refer":"ok")}</div>
+   <p><b>${esc(r.recommendation)}</b></p><div class="res">${eyes}</div>
+   <p><a href="/api/screenings/${esc(r.id)}/report" target="_blank"><button class="ghost" type="button">Print referral slip</button></a></p>
+   <p class="muted">${esc(r.disclaimer)}</p>`;el.scrollIntoView({behavior:"smooth"})}
+document.getElementById("form").onsubmit=async ev=>{ev.preventDefault();const btn=document.getElementById("go"),st=document.getElementById("status");
+  btn.disabled=true;st.textContent="Analysing…";
+  try{const res=await fetch("/api/screenings",{method:"POST",body:new FormData(ev.target)});const j=await res.json();
+    if(!res.ok)throw new Error(j.detail||res.statusText);render(j);recent();st.textContent=""}
+  catch(e){st.textContent="Error: "+e.message}finally{btn.disabled=false}};
+health();recent();
+</script>
+</body>
+</html>

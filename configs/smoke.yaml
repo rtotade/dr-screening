@@ -1,0 +1,25 @@
+# Fast CPU smoke test on synthetic data (no downloads). Not for real models.
+data:
+  manifest: data/synthetic/manifest.csv
+  val_frac: 0.25
+  image_size: 224
+  ben_graham: true
+  cache_dir: data/cache_smoke
+  balance_power: 0.5
+  num_workers: 0
+model:
+  backbone: resnet18
+  pretrained: false
+  dropout: 0.2
+train:
+  epochs: 15
+  batch_size: 16
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  label_smoothing: 0.0
+  early_stop_patience: 15
+  seed: 42
+  amp: false
+screening:
+  target_sensitivity: 0.90
+  output_dir: runs/smoke
